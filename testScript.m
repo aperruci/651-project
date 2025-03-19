@@ -1,5 +1,7 @@
 %% testScript
 % Use to debug functions.
+clear
+close all
 
 % Test [tr, r, tth, theta] = approxTrajectory(X,T,nr,nth,method,omega,tm,rm,rdotm)
 % Earth-Mars Transfer
@@ -36,12 +38,56 @@ nexttile
 plot(tr_cp,r_cp,...
      tr_th,r_th, ...
      'LineWidth',2)
-title('Initial trajectory')
+title('Earth-Mars initial trajectory')
 legend('cubic polynomial','tanh')
 ylabel('r (DU)')
 nexttile
 plot(tth_cp,theta_cp, ...
      tth_th,theta_th, ...
+     'LineWidth',2)
+xlabel('t (TU)')
+ylabel('\theta (rad)')
+
+% LEO 90 deg Phasing
+% Boundary conditions: (all units in DU and TU)
+r0 = 1.0313;
+theta0 = 0;
+r1 = 1.0313;
+theta1 = 7.8539;
+rdot0 = 0;
+thetadot0 = 0.9548;
+rdot1 = 0;
+thetadot1 = 0.9548;
+X = [r0
+     theta0
+     r1
+     theta1
+     rdot0
+     thetadot0
+     rdot1
+     thetadot1];
+
+% Switching conditions:
+tm = 6;
+rm = 1.05;
+
+% Parameters:
+Nrev = 1;
+nr = 3;
+nth = 6;
+T = 8.924;
+
+% Initial Trajectory:
+[tr_2cp, r_2cp, tth_2cp, theta_2cp] = approxTrajectory(X,T,nr,nth,'2CP',tm,rm);
+figure
+tiledlayout(2,1,'tilespacing','tight','padding','tight')
+nexttile
+plot(tr_2cp,r_2cp,...
+     'LineWidth',2)
+title('LEO Phasing initial trajectory')
+ylabel('r (DU)')
+nexttile
+plot(tth_2cp,theta_2cp, ...
      'LineWidth',2)
 xlabel('t (TU)')
 ylabel('\theta (rad)')
