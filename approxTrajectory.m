@@ -1,4 +1,4 @@
-function [tr, r, tth, theta] = approxTrajectory(X,T,nr,nth,method,omega)
+function [tr, r, tth, theta] = approxTrajectory(X,T,nr,nth,method,omega,tm,rm,rdotm)
 %APPROXTRAJECTORY Approximate (r,theta) trajectory from generating
 %function.
 %   Input:
@@ -17,6 +17,9 @@ function [tr, r, tth, theta] = approxTrajectory(X,T,nr,nth,method,omega)
 %            "CP" cubic polynomial OR
 %            "2CP" two-joined cubic polynomial (phasing only)
 %   omega = width parameter for TH method. 1 <= omega <= 3
+%   tm = segment switch time for phasing problem
+%   rm = segment switch radius for phasing problem
+%   rdotm = segment switch radial velocity for phasing problem
 %
 %   Output:
 %   tr    = time steps for radius
@@ -31,12 +34,6 @@ end
 if nargin < 5
     method = "TH";
     omega = 2;
-end
-if all(method ~= ["TH", "CP", "2CP"])
-    error("Invalid method. ''method'' must be ''TH'',''CP'', or ''2CP''")
-end
-if any([omega<1,omega>3])
-    error("Invalid value of omega. Must satisfy 1 <= omega <= 3")
 end
 
 % Boundary conditions:
@@ -66,7 +63,41 @@ switch method
         theta = 0.5*((ath + bth) + (bth - ath)*tanh((tth - t0)/omega)); % Eqn 15
     
     case "CP" % Cubic polynomial
-        a = (2*(r0 - r1) + (rdot0 + rdot1)*T)/T^3;
+        a = (2*(r0 - r1) + (rdot0 + rdot1)*T)/T^3; % Eqn C3
+        b = -(3*(r0 - r1) + (2*rdot0 + rdot1)*T)/T^2;
+        c = rdot0;
+        d = r0;
         
+        e = (2*(theta0 - theta1) + (thetadot0 + thetadot1)*T)/T^3;
+        f = -(3*(theta0 - theta1) + (2*thetadot0 + thetadot1)*T)/T^2;
+        g = thetadot0;
+        h = theta0;
+        
+        r = a*tr.^3 + b*tr.^2 + c*tr + d;
+        theta = e*tth.^3 + f*tth.^2 + g*tth + h;
+    
+    case "2CP" % Two-jointed cubic polynomials
+        as1 = (2*(r0 - rm) + (rdot0 + rdotm)*tm)/tm^3; % Eqn D3
+        bs1 = -(3*(r0 - rm) + (2*rdot0 + rdotm)*tm)/tm^2;
+        cs1 = rdot0;
+        ds1 = r0;
+        
+        as2 = (2*(rm - r1) + rdot1*(T-tm))/(T-tm)^3;
+        bs2 = -(tm*(3*(rm - r1) + rdot1*T) + rdot1*T^2 - 2*rdot1*tm^2 - 3*T*(r1-rm)) / (T-tm)^3;
+        cs2 = -rdot1*(tm^3 - 2*T^2*tm + T*tm*(6*(r1 - rm) + rdot1*tm)) / (T-tm)^3;
+        ds2 = (rm*T^3 - (rdot1*tm^2 + 3*rm*rm)*T^2 + (rdot1 + 3*r1)*tm^2*T - r1*tm^3) / (T-tm)^3;
+        
+        e = (2*(theta0 - theta1) + (thetadot0 + thetadot1)*T)/T^3; % Eqn C3
+        f = -(3*(theta0 - theta1) + (2*thetadot0 + thetadotf)*T)/T^2;
+        g = thetadot0;
+        h = theta0;
+        
+        rs1 = as1*tr(tr<tm).^3 + bs1*tr(tr<tm).^2 + cs1*tr(tr<tm) + ds1;
+        rs2 = as2*tr(tr>=tm).^3 + bs2*tr(tr>=tm).^2 + cs2*tr(tr>=tm) + ds2;
+        r = [rs1, rs2];
+        theta = e*tth.^3 + f*tth.^2 + g*tth + h;
+
+    otherwise
+        error("Invalid method. ''method'' must be ''TH'',''CP'', or ''2CP''")
 end
         
