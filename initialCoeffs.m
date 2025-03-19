@@ -1,4 +1,4 @@
-function [tr, r, tth, theta] = approxTrajectory(X,T,nr,nth,method,tm,rm)
+function [r_coeffs,th_coeffs,tr,r,tth,theta] = initialCoeffs(X,T,nr,nth,method,tm,rm)
 %APPROXTRAJECTORY Approximate (r,theta) trajectory from generating
 %function.
 %   Input:
@@ -41,8 +41,10 @@ rdot1 = X(7);
 thetadot1 = X(8);
 
 % Discretize t:
-tr = linspace(0,T,nr);
-tth = linspace(0,T,nth);
+len_r = 2*nr+1;
+len_th = 2*nth+1;
+tr = linspace(0,T,len_r);
+tth = linspace(0,T,len_th);
 
 % Approximate trajectory:
 switch method
@@ -94,6 +96,22 @@ switch method
         theta = e*tth.^3 + f*tth.^2 + g*tth + h;
 
     otherwise
-        error("Invalid method. ''method'' must be ''TH'',''CP'', or ''2CP''")
+        error("Invalid method string. ''method'' must be ''TH'',''CP'', or ''2CP''")        
 end
-        
+
+% Linear least squares:
+Ar = zeros(len_r);
+Ar(:,1) = 0.5*ones(len_r,1);
+for i = 1:nr
+    Ar(:,2*i) = cos(i*pi/T*tr);
+    Ar(:,2*i+1) = sin(i*pi/T*tr);
+end
+r_coeffs = Ar\r';
+
+Ath = zeros(len_th);
+Ath(:,1) = 0.5*ones(len_th,1);
+for i = 1:nth
+    Ath(:,2*i) = cos(i*pi/T*tth);
+    Ath(:,2*i+1) = sin(i*pi/T*tth);
+end  
+th_coeffs = Ath\theta';
