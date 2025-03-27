@@ -1,6 +1,5 @@
 function [Ta,r,theta,rdot,thetadot,rddot,thetaddot] = trajectoryFFS(t,a0,a,b,c0,c,d)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+%TRAJECTORYFFS Generate shape-based trajectory from FFS coefficients
 
 % Parameters:
 nr = length(a);

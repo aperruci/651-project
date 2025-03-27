@@ -1,27 +1,35 @@
-%% LEO-GEO Maneuver
+%% LEOtoGEO.m
+%
+% Computes the Finite Fourier Series (FFS) approximation of constrained 
+% low-thrust LEO-to-GEO rendezvous.
+%
+% AER E 6510 Spring 2025
+% Final Project
+% Alex Perruci and Hunter Underwood
+
 clear
 close all
 
 % Parameters:
-Nrev = 7;
-nr = 2;
-ntheta = 3;
-Isp = 3.7183;
-m0 = 1e5/1.9891e30;
-nDP = 40;
-Ta_max = 0.0153;
-T = 148.73;
+Nrev = 7;           % number of revolutions
+nr = 2;             % number of radius FFS terms
+ntheta = 3;         % number of theta FFS terms
+Isp = 3.7183;       % specific impulse (TU)
+m0 = 1e5/5.9722e24; % initial mass (MU)
+nDP = 40;           % number of discretization points
+Ta_max = 0.0153;    % maximum thrust acceleration (DU/TU^2)
+T = 148.73;         % final time (TU)
 
 % Boundary Conditions:
-r0 = 1.0313;
-theta0 = 0;
-r1 = 6.61;
-theta1 = 47.123;
-rdot0 = 0;
-thetadot0 = 0.9562;
-rdot1 = 0;
-thetadot1 = 0.058842;
-BC = [r0
+r0 = 1.0313;           % initial radius (DU)
+theta0 = 0;            % initial polar angle (rad)
+r1 = 6.61;             % final radius (DU)
+theta1 = 47.123;       % final polar angle (rad)
+rdot0 = 0;             % initial radial velocity (DU/TU)
+thetadot0 = 0.9562;    % initial angular velocity (rad/TU)
+rdot1 = 0;             % final radial velocity (DU/TU)
+thetadot1 = 0.058842;  % final radial velocity (rad/TU)
+BC = [r0               
       theta0
       r1   
       theta1
@@ -32,14 +40,16 @@ BC = [r0
 
 % Initial guess for FFS coefficients:
 coeffs_guess = initialCoeffs(BC,T,nr,ntheta,'CP');
-X_guess = [coeffs_guess(1)            %a0
-           coeffs_guess(6:2*nr+1)     %a3-anr, b3_nr
-           coeffs_guess(2*nr+2)       %c0
-           coeffs_guess(2*nr+7:end)]; %c3-cntheta, d3-dntheta
+
+% Only keep the free parameters to optimize:
+X_guess = [coeffs_guess(1)            % a0
+           coeffs_guess(6:2*nr+1)     % a3, b3, ..., anr, bnr
+           coeffs_guess(2*nr+2)       % c0
+           coeffs_guess(2*nr+7:end)]; % c3, d3, ... cntheta, dntheta
 
 % FFS Optimization:
 t_DP = linspace(0,T,nDP);
-[X_opt,fit] = fmincon(@(X)objectiveFun(X,t_DP,nr,ntheta,BC,Isp,m0), ...
+[X_opt,fit] = fmincon(@(X)objectiveFun(X,t_DP,nr,ntheta,BC,Isp,m0,0), ...
                 X_guess, ...
                 [],[],[],[],[],[], ...
                 @(X)constraintFun(X,t_DP,nr,ntheta,BC,Ta_max));
