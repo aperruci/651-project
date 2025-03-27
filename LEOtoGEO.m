@@ -43,42 +43,12 @@ t_DP = linspace(0,T,nDP);
                 X_guess, ...
                 [],[],[],[],[],[], ...
                 @(X)constraintFun(X,t_DP,nr,ntheta,BC,Ta_max));
-
-a0_opt = X_opt(1);
-a_opt(3:nr) = X_opt(2:2:2*nr-3);
-a_opt(1) = (r0 - r1)/2 - sum(a_opt(3:2:end));
-a_opt(2) = (r0 + r1 - a0_opt)/2 - sum(a_opt(4:2:end));
-
-b_opt(3:nr) = X_opt(3:2:2*nr-3);
-b_opt(1) = T/(2*pi)*(rdot0 - rdot1) - sum((3:2:nr).*b_opt(3:2:end));
-b_opt(2) = T/(4*pi)*(rdot0 + rdot1) - 0.5*sum((4:2:nr).*b_opt(4:2:end));
-
-c0_opt = X_opt(2*nr-3 + 1);
-c_opt(3:ntheta) = X_opt(2*nr-3 + 2:2:end);
-c_opt(1) = (theta0 - theta1)/2 - sum(c_opt(3:2:end));
-c_opt(2) = (theta0 + theta1 - c0_opt)/2 - sum(c_opt(4:2:end));
-
-d_opt(3:ntheta) = X_opt(2*nr-3 + 3:2:end);
-d_opt(1) = T/(2*pi)*(thetadot0 - thetadot1) - sum((3:2:ntheta).*d_opt(3:2:end));
-d_opt(2) = T/(4*pi)*(thetadot0 + thetadot1) - 0.5*sum((4:2:ntheta).*d_opt(4:2:end));
+[a0_opt,a_opt,b_opt,c0_opt,c_opt,d_opt] = params2Coeffs(X_opt,t_DP,nr,ntheta,BC);
 
 % Trajectory:
 t = linspace(0,T,1000);
-r = 0.5*a0_opt + sum(a_opt'.*cos((1:nr)'*pi/T.*t) + b_opt'.*sin((1:nr)'*pi/T.*t));
-rdot = sum(-a_opt' .* ((1:nr)'*pi/T) .* sin((1:nr)'*pi/T.*t) ...
-           + b_opt' .* ((1:nr)'*pi/T) .* cos((1:nr)'*pi/T.*t));
-rddot = sum(-a_opt' .* ((1:nr)'*pi/T).^2 .* cos((1:nr)'*pi/T.*t) ...
-            - b_opt' .* ((1:nr)'*pi/T).^2 .* sin((1:nr)'*pi/T.*t));      
-theta = 0.5*c0_opt + sum(c_opt'.*cos((1:ntheta)'*pi/T.*t) + d_opt'.*sin((1:ntheta)'*pi/T.*t));
-thetadot = sum(-c_opt' .* ((1:ntheta)'*pi/T) .* sin((1:ntheta)'*pi/T.*t) ...
-               + d_opt' .* ((1:ntheta)'*pi/T) .* cos((1:ntheta)'*pi/T.*t));
-thetaddot = sum(-c_opt' .* ((1:ntheta)'*pi/T).^2 .* cos((1:ntheta)'*pi/T.*t) ...
-                - d_opt' .* ((1:ntheta)'*pi/T).^2 .* sin((1:ntheta)'*pi/T.*t));
+[Ta,r,theta] = trajectoryFFS(t,a0_opt,a_opt,b_opt,c0_opt,c_opt,d_opt);
 [x,y] = pol2cart(theta,r);
-
-% Thrust acceleration:
-cosalpha = r.*thetadot./sqrt(rdot.^2 + (r.*thetadot).^2);
-Ta = (2*rdot.*thetadot + r.*thetaddot) ./ cosalpha;
 
 % Plots
 figure
