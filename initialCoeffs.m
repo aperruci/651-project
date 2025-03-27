@@ -1,4 +1,4 @@
-function [tr, r, tth, theta] = approxTrajectory(X,T,nr,nth,method,omega,tm,rm,rdotm)
+function [coeffs,tr,r,tth,theta] = initialCoeffs(X,T,nr,nth,method,tm,rm)
 %APPROXTRAJECTORY Approximate (r,theta) trajectory from generating
 %function.
 %   Input:
@@ -16,10 +16,8 @@ function [tr, r, tth, theta] = approxTrajectory(X,T,nr,nth,method,omega,tm,rm,rd
 %   method = "TH" tangent hyperbolic OR
 %            "CP" cubic polynomial OR
 %            "2CP" two-joined cubic polynomial (phasing only)
-%   omega = width parameter for TH method. 1 <= omega <= 3
 %   tm = segment switch time for phasing problem
 %   rm = segment switch radius for phasing problem
-%   rdotm = segment switch radial velocity for phasing problem
 %
 %   Output:
 %   tr    = time steps for radius
@@ -28,12 +26,8 @@ function [tr, r, tth, theta] = approxTrajectory(X,T,nr,nth,method,omega,tm,rm,rd
 %   theta = approximate central angle over time
 
 % Check input:
-if nargin < 6 && method == "TH"
-    omega = 2;
-end
 if nargin < 5
     method = "TH";
-    omega = 2;
 end
 
 % Boundary conditions:
@@ -47,12 +41,15 @@ rdot1 = X(7);
 thetadot1 = X(8);
 
 % Discretize t:
-tr = linspace(0,T,nr);
-tth = linspace(0,T,nth);
+len_r = 2*nr+1;
+len_th = 2*nth+1;
+tr = linspace(0,T,len_r);
+tth = linspace(0,T,len_th);
 
 % Approximate trajectory:
 switch method
     case "TH" % Tangent hyperbolic
+        omega = 3; % shaping parameter, 1<=omega<=3
         ar = r0;
         br = r1;
         ath = theta0;
@@ -77,18 +74,19 @@ switch method
         theta = e*tth.^3 + f*tth.^2 + g*tth + h;
     
     case "2CP" % Two-jointed cubic polynomials
-        as1 = (2*(r0 - rm) + (rdot0 + rdotm)*tm)/tm^3; % Eqn D3
-        bs1 = -(3*(r0 - rm) + (2*rdot0 + rdotm)*tm)/tm^2;
+        as1 = (2*(r0 - rm) + rdot0*tm)/tm^3; % Eqn D3 is missing terms in the paper
+        bs1 = -(3*(r0 - rm) + 2*rdot0*tm)/tm^2;
         cs1 = rdot0;
         ds1 = r0;
-        
-        as2 = (2*(rm - r1) + rdot1*(T-tm))/(T-tm)^3;
-        bs2 = -(tm*(3*(rm - r1) + rdot1*T) + rdot1*T^2 - 2*rdot1*tm^2 - 3*T*(r1-rm)) / (T-tm)^3;
-        cs2 = -rdot1*(tm^3 - 2*T^2*tm + T*tm*(6*(r1 - rm) + rdot1*tm)) / (T-tm)^3;
-        ds2 = (rm*T^3 - (rdot1*tm^2 + 3*rm*rm)*T^2 + (rdot1 + 3*r1)*tm^2*T - r1*tm^3) / (T-tm)^3;
+
+        D = (T - tm)^3;
+        as2 = (2*(rm - r1) + rdot1*T - rdot1*tm)/D;
+        bs2 = -(tm*(3*rm - 3*r1 + rdot1*T) + rdot1*T^2 - 2*rdot1*tm^2 - T*(3*r1 - 3*rm))/D;
+        cs2 = -(rdot1*tm^3 - 2*rdot1*T^2*tm + T*tm*(6*r1 - 6*rm + rdot1*tm))/D;
+        ds2 = (rm*T^3 - rdot1*T^2*tm^2 - 3*rm*T^2*tm + rdot1*T*tm^3 + 3*r1*T*tm^2 - r1*tm^3)/D;
         
         e = (2*(theta0 - theta1) + (thetadot0 + thetadot1)*T)/T^3; % Eqn C3
-        f = -(3*(theta0 - theta1) + (2*thetadot0 + thetadotf)*T)/T^2;
+        f = -(3*(theta0 - theta1) + (2*thetadot0 + thetadot1)*T)/T^2;
         g = thetadot0;
         h = theta0;
         
@@ -98,6 +96,26 @@ switch method
         theta = e*tth.^3 + f*tth.^2 + g*tth + h;
 
     otherwise
-        error("Invalid method. ''method'' must be ''TH'',''CP'', or ''2CP''")
+        error("Invalid method string. ''method'' must be ''TH'',''CP'', or ''2CP''")        
 end
-        
+
+% Linear least squares:
+Ar = zeros(len_r);
+Ar(:,1) = 0.5*ones(len_r,1);
+for i = 1:nr
+    Ar(:,2*i) = cos(i*pi/T*tr);
+    Ar(:,2*i+1) = sin(i*pi/T*tr);
+end
+r_coeffs = Ar\r';
+
+Ath = zeros(len_th);
+Ath(:,1) = 0.5*ones(len_th,1);
+for i = 1:nth
+    Ath(:,2*i) = cos(i*pi/T*tth);
+    Ath(:,2*i+1) = sin(i*pi/T*tth);
+end  
+th_coeffs = Ath\theta';
+
+coeffs = [r_coeffs
+          th_coeffs];
+      
