@@ -1,4 +1,4 @@
-function [r_coeffs,th_coeffs,tr,r,tth,theta] = initialCoeffs(X,T,nr,nth,method,tm,rm)
+function [coeffs,tr,r,tth,theta] = initialCoeffs(X,T,nr,nth,method,tm,rm)
 %APPROXTRAJECTORY Approximate (r,theta) trajectory from generating
 %function.
 %   Input:
@@ -115,3 +115,7 @@ for i = 1:nth
     Ath(:,2*i+1) = sin(i*pi/T*tth);
 end  
 th_coeffs = Ath\theta';
+
+coeffs = [r_coeffs
+          th_coeffs];
+      
