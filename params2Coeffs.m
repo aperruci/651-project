@@ -32,4 +32,3 @@ d(3:ntheta) = X(2*nr-3 + 3:2:end);
 d(1) = T/(2*pi)*(thetadot0 - thetadot1) - sum((3:2:ntheta).*d(3:2:end));
 d(2) = T/(4*pi)*(thetadot0 + thetadot1) - 0.5*sum((4:2:ntheta).*d(4:2:end));
 end
-

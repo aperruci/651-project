@@ -1,4 +1,4 @@
-function out = objectiveFun(X,t,nr,ntheta,BC,Isp,m0,weight)
+function out = objectiveFun(X,t,nr,ntheta,BC,Isp,m0,weight,deltaV_only)
 % OBJECTIVEFUN Objective function for FFS coefficient optimization.
 % Enforces the equations of motion and penalizes delta V.
 %
@@ -34,4 +34,8 @@ end
 deltaV = g0Isp*log(m0/m(end)); % (DU/TU)
 
 % Fitness:
-out = f_res + weight*deltaV;
+if deltaV_only
+    out = deltaV;
+else
+    out = f_res + weight*deltaV;
+end

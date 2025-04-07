@@ -48,19 +48,31 @@ X_guess = [coeffs_guess(1)            % a0
            coeffs_guess(2*nr+2)       % c0
            coeffs_guess(2*nr+7:end)]; % c3, d3, ... cntheta, dntheta
 
+% TODO Put for loop here to iterate over weight
+weight = 0;
+
 % FFS Optimization:
 t_DP = linspace(0,T,nDP);
-[X_opt,fit] = fmincon(@(X)objectiveFun(X,t_DP,nr,ntheta,BC,Isp,m0,0), ...
+deltaV_only = false;
+[X_opt,fit] = fmincon(@(X)objectiveFun(X,t_DP,nr,ntheta,BC,Isp,m0,weight,deltaV_only), ...
                 X_guess, ...
                 [],[],[],[],[],[], ...
                 @(X)constraintFun(X,t_DP,nr,ntheta,BC,Ta_max));
 [a0_opt,a_opt,b_opt,c0_opt,c_opt,d_opt] = params2Coeffs(X_opt,t_DP,nr,ntheta,BC);
+
+% Equation of motion residual:
+f_res = objectiveFun(X_opt,t_DP,nr,ntheta,BC,Isp,m0,0,deltaV_only);
+
+% Delta V:
+deltaV_only = true;
+delta_V = objectiveFun(X_opt,t_DP,nr,ntheta,BC,Isp,m0,0,deltaV_only);
 
 % Trajectory:
 t = linspace(0,T,1000);
 [Ta,r,theta] = trajectoryFFS(t,a0_opt,a_opt,b_opt,c0_opt,c_opt,d_opt);
 [x,y] = pol2cart(theta,r);
 
+% TODO Plot every case
 % Plots
 figure
 plot(x,y,'k')
